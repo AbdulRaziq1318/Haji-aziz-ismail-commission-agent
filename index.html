@@ -23,9 +23,13 @@
             --accent-green: #2E7D32;
             --soft-bg: #F7F9FC;
             --border-soft: #E0E0E0;
-            --cream: #FFEFD8;
-            --cream-border: #FFCC99;
-            --soft-green: #EAF8E6;
+
+            /* Notes box tuning */
+            --note-line-color: #000;     /* line color (change #444 if too strong) */
+            --note-font-size: 16px;      /* font-size used inside preview note */
+            --note-line-height: 28px;    /* distance between visual lines */
+            --note-heading-height: 36px; /* reserved heading area inside box (تفصیل) */
+            --note-line-offset: 6px;     /* small offset to position lines slightly below baseline */
         }
 
         html,body{height:100%}
@@ -75,7 +79,65 @@
 
         /* boxes */
         .box-break { background:var(--soft-green); border:1px solid var(--accent-green); border-radius:12px; padding:18px; }
-        .box-notes { background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:16px; box-shadow:0 6px 12px rgba(0,0,0,0.04); min-height:120px; }
+
+        /* ===== Notes box: improved alignment =====
+           Approach:
+           - Lines are rendered by an absolutely positioned layer (.note-lines).
+           - .note-lines top is set so lines begin below the heading area.
+           - .note-content uses the same line-height as the lines, and a small padding-top
+             so that typed text's baseline sits above the visual rule (line).
+        */
+        .box-notes {
+            background:#fff;
+            border:1px solid #e6e6e6;
+            border-radius:12px;
+            padding:8px 12px 14px 12px;
+            box-shadow:0 6px 12px rgba(0,0,0,0.04);
+            min-height: calc(var(--note-heading-height) + var(--note-line-height) * 3);
+            position:relative;
+            overflow:visible;
+        }
+
+        /* the ruled lines layer (absolute), starts below heading area */
+        .box-notes .note-lines {
+            position:absolute;
+            left:0;
+            right:0;
+            /* start lines a bit lower than heading;
+               using line-height and a small offset so lines fall under text baseline */
+            top: calc(var(--note-heading-height) + var(--note-line-height) - var(--note-line-offset));
+            bottom:8px;
+            z-index:0;
+            background-image: linear-gradient(to bottom, var(--note-line-color) 1px, transparent 1px);
+            background-size: 100% var(--note-line-height);
+            pointer-events:none;
+        }
+
+        .box-notes .note-heading {
+            position:relative;
+            z-index:2;
+            font-weight:700;
+            color:var(--primary);
+            margin:0 0 6px 0;
+            height: var(--note-heading-height);
+            line-height: var(--note-heading-height);
+        }
+
+        .box-notes .note-content {
+            position:relative;
+            z-index:2;
+            /* IMPORTANT: text line-height matches visual line spacing */
+            font-size: var(--note-font-size);
+            line-height: var(--note-line-height);
+            min-height: calc(var(--note-line-height) * 3);
+            color:#000;
+            white-space: pre-wrap;
+            /* small top padding to vertically align text baseline above the visual line */
+            padding-top: calc(var(--note-line-offset) - 2px);
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
         .box-comm { background:#fff; border:1px solid rgba(0,0,0,0.06); border-left:6px solid var(--accent-green); border-radius:10px; padding:14px; }
 
         .break-row { display:flex; justify-content:space-between; padding:8px 0; align-items:center; }
@@ -97,6 +159,10 @@
             .invoice-card{ box-shadow:none !important; border:none !important; }
             .header-fruit { display:block !important; opacity:1 !important; width:95px !important; }
             img { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            /* ensure ruled lines print as well and start at same place */
+            .box-notes .note-lines {
+                background-image: linear-gradient(to bottom, var(--note-line-color) 1px, transparent 1px);
+            }
         }
     </style>
 </head>
@@ -168,7 +234,7 @@
 
             <div class="invoice-card p-6">
                 <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">نوٹس</h2>
-                <textarea id="notes" rows="3" class="w-full input-underline font-body" placeholder="کوئی نوٹس..."></textarea>
+                <textarea id="notes" rows="3" class="w-full input-underline font-body" placeholder="کوئی تفصیل..."></textarea>
             </div>
         </div>
 
@@ -222,8 +288,13 @@
 
                         <!-- notes top -->
                         <div class="box-notes">
-                            <div style="font-weight:700;color:var(--primary);margin-bottom:6px;">نوٹس</div>
-                            <div id="previewNotesShort" style="min-height:60px;color:var(--secondary);font-size:0.95rem;">(کوئی نوٹس نہیں)</div>
+                            <div class="note-heading">تفصیل</div>
+
+                            <!-- absolute lines layer -->
+                            <div class="note-lines" aria-hidden="true"></div>
+
+                            <!-- content (text shown here) -->
+                            <div id="previewNotesShort" class="note-content">(کوئی تفصیل نہیں)</div>
                         </div>
 
                         <!-- summary below notes -->
@@ -441,10 +512,10 @@
         if (notes.trim()) {
             notesShort.textContent = notes;
         } else {
-            notesShort.textContent = "(کوئی نوٹس نہیں)";
+            notesShort.textContent = "(کوئی تفصیل نہیں)";
         }
 
-        // populate hidden items table (kept for records)
+        // populate hidden items table (kept DOM)
         const tbody = document.getElementById("itemsPreviewBody");
         if (tbody) {
             tbody.innerHTML = "";
