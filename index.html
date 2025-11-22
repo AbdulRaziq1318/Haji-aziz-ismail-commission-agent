@@ -1,19 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ur">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Haji Abdul Aziz Ismail - Bill Generator</title>
 
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Icons -->
+    <!-- Icons & html2canvas -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root{
@@ -30,7 +31,7 @@
         html,body{height:100%}
         body{
             margin:0;
-            font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
             background: var(--soft-bg);
             color: var(--secondary);
             -webkit-print-color-adjust:exact;
@@ -46,33 +47,47 @@
         .input-underline { border:none; border-bottom:2px solid #e6e7eb; padding:6px 0; background:transparent; transition:border-color .15s; }
         .input-underline:focus{ outline:none; border-bottom-color:var(--primary); }
 
-        .header-fruit { position:absolute; top:50%; transform:translateY(-50%); width:70px; height:auto; opacity:.95; }
-        .header-fruit.left{ left:16px; }
-        .header-fruit.right{ right:16px; }
+        /* Header fruit images */
+        .header-fruit { position:absolute; top:50%; transform:translateY(-50%); width:95px; height:auto; opacity:.95; }
+        .header-fruit.left{ left:12px; }
+        .header-fruit.right{ right:12px; }
 
-        .header-center { padding-left:5.5rem; padding-right:5.5rem; }
+        .header-center { padding-left:7rem; padding-right:7rem; }
 
-        @media (max-width:768px){
-            .header-fruit{ width:56px; }
-            .header-center{ padding-left:1.5rem; padding-right:1.5rem; }
+        @media (max-width: 900px) {
+            .header-center { padding-left:2rem; padding-right:2rem; }
+            .header-fruit { width:72px; }
         }
 
-        /* preview layout */
-        .preview-row { display:flex; gap:1rem; align-items:flex-start; }
-        .left-col { flex:1; }
-        .right-col { width:340px; display:flex; flex-direction:column; gap:1rem; }
+        /* MAIN PREVIEW GRID: left 50% / right 50% */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 50/50 */
+            gap: 1rem;
+            align-items: start;
+        }
 
-        .box-break { background:var(--soft-green); border:1px solid var(--accent-green); border-radius:12px; padding:16px; }
-        .box-notes { background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:14px; box-shadow:0 6px 12px rgba(0,0,0,0.04); min-height:140px; }
-        .box-comm { background:#fff; border:1px solid rgba(0,0,0,0.06); border-left:6px solid var(--accent-green); border-radius:10px; padding:12px; }
+        .left-col, .right-col {
+            min-height: 220px;
+        }
+        .left-col { display:flex; flex-direction:column; gap:1rem; }
+        .right-col { display:flex; flex-direction:column; gap:1rem; }
 
-        .break-row { display:flex; justify-content:space-between; padding:8px 0; }
+        /* boxes */
+        .box-break { background:var(--soft-green); border:1px solid var(--accent-green); border-radius:12px; padding:18px; }
+        .box-notes { background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:16px; box-shadow:0 6px 12px rgba(0,0,0,0.04); min-height:120px; }
+        .box-comm { background:#fff; border:1px solid rgba(0,0,0,0.06); border-left:6px solid var(--accent-green); border-radius:10px; padding:14px; }
+
+        .break-row { display:flex; justify-content:space-between; padding:8px 0; align-items:center; }
         .break-title { color:var(--accent-green); font-weight:700; }
         .break-val { color:var(--secondary); font-weight:700; }
         .break-highlight { color:var(--accent-green); font-weight:800; font-size:1.05rem; }
         .break-total { color:#D04545; font-weight:800; font-size:1.1rem; }
 
-        .items-preview-table{ display:none !important; }
+        .items-preview-table { display:none !important; }
+
+        /* small control buttons area */
+        .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
         /* print fixes */
         @media print {
@@ -80,38 +95,32 @@
             .no-print, .no-print * { display:none !important; visibility:hidden !important; }
             body{ margin:0 !important; padding:0 !important; }
             .invoice-card{ box-shadow:none !important; border:none !important; }
-            /* Ensure header images print */
-            .header-fruit { display:block !important; opacity:1 !important; width:70px !important; }
+            .header-fruit { display:block !important; opacity:1 !important; width:95px !important; }
             img { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
 </head>
 <body class="min-h-screen">
 
-<!-- NOTE:
- - Use 'fruits.png' in the same folder as this HTML.
- - If running inside the environment where images were uploaded to /mnt/data, you may replace src with:
-   /mnt/data/JUST REMOVE.png
--->
+<div class="max-w-6xl mx-auto p-6 md:p-10">
 
-<div class="max-w-7xl mx-auto p-6 md:p-10">
-
-    <!-- Controls (hidden in print via .no-print) -->
+    <!-- Top controls -->
     <div class="flex items-center justify-between mb-6 no-print">
         <h1 class="text-2xl font-eng font-semibold text-[var(--primary)]">Haji Ismail Commission Agent</h1>
 
-        <div class="flex gap-3">
+        <div class="controls">
             <button onclick="updateBill()" class="bg-[var(--accent-green)] text-white px-4 py-2 rounded-md">Apply Preview</button>
             <button onclick="printBill()" class="bg-[var(--primary)] text-white px-4 py-2 rounded-md">Print Bill</button>
+            <button onclick="downloadImage()" class="bg-gray-700 text-white px-4 py-2 rounded-md">Download Image</button>
+            <button onclick="shareWhatsApp()" class="bg-green-600 text-white px-4 py-2 rounded-md">Share (WhatsApp)</button>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        <!-- LEFT: FORM -->
+        <!-- LEFT: form -->
         <div class="space-y-6 no-print">
 
-            <!-- Bill Details -->
             <div class="invoice-card p-6">
                 <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Bill Details</h2>
                 <div class="grid grid-cols-2 gap-6">
@@ -126,7 +135,6 @@
                 </div>
             </div>
 
-            <!-- Items -->
             <div class="invoice-card p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-eng font-semibold text-[var(--primary)]">Items</h2>
@@ -135,9 +143,8 @@
                 <div id="itemsList" class="space-y-4"></div>
             </div>
 
-            <!-- Expenses (per-item) -->
             <div class="invoice-card p-6">
-                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Expenses (Per-item)</h2>
+                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Expenses (Per-unit)</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
                         <label class="text-sm font-body text-[var(--secondary)]">کمیشن (%):</label>
@@ -159,133 +166,130 @@
                 </div>
             </div>
 
-            <!-- Notes (form) -->
             <div class="invoice-card p-6">
-                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Notes</h2>
-                <textarea id="notes" rows="3" class="w-full input-underline font-body" placeholder="کوئی نوٹ..."></textarea>
+                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">نوٹس</h2>
+                <textarea id="notes" rows="3" class="w-full input-underline font-body" placeholder="کوئی نوٹس..."></textarea>
             </div>
         </div>
 
-        <!-- RIGHT: PREVIEW -->
+        <!-- RIGHT: preview -->
         <div class="lg:sticky lg:top-8 h-fit">
 
-            <div class="bg-gray-200 p-2 rounded-t-lg text-center text-sm text-gray-600 no-print">Preview Area</div>
+            <div id="billPreview" class="invoice-card p-6 overflow-hidden">
 
-            <div class="invoice-card overflow-hidden mt-0">
-                <div class="bg-white p-6 relative">
-
-                    <!-- header -->
-                    <div class="relative pb-4 border-b-2 border-[var(--primary)]">
-                        <!-- local image (project folder) -->
-                        <img src="fruits.png" alt="fruits" class="header-fruit left">
-                        <img src="fruits.png" alt="fruits" class="header-fruit right">
-                        <div class="text-center header-center">
-                            <h1 class="text-[36px] font-urdu font-bold text-[var(--primary)] leading-tight">حاجی عبدالعزیز اسماعیل</h1>
-                            <h2 class="mt-2 text-xl font-eng font-semibold text-[var(--accent-green)]">HAJI ABDUL AZIZ ISMAIL</h2>
-                            <p class="text-sm font-body text-[var(--secondary)] mt-1">Fruits & Vegetable Commission Agent</p>
-                            <p class="font-body text-[var(--secondary)] text-sm mt-1">Contact: 0333-9973274 | 0348-9056525</p>
-                            <p class="font-urdu text-[var(--primary)] font-semibold mt-1 text-base">شاپ نمبر 104 نیو سبزی منڈی رتہ کلاچی ڈیرہ اسماعیل خان</p>
-                        </div>
+                <!-- header -->
+                <div class="relative pb-4 border-b-2 border-[var(--primary)]">
+                    <img src="fruits.png" alt="fruits" class="header-fruit left">
+                    <img src="fruits.png" alt="fruits" class="header-fruit right">
+                    <div class="text-center header-center">
+                        <h1 class="text-[34px] font-urdu font-bold text-[var(--primary)] leading-tight">حاجی عبدالعزیز اسماعیل</h1>
+                        <h2 class="mt-2 text-lg font-eng font-semibold text-[var(--accent-green)]">HAJI ABDUL AZIZ ISMAIL</h2>
+                        <p class="text-sm font-body text-[var(--secondary)] mt-1">Fruits & Vegetable Commission Agent</p>
+                        <p class="font-body text-[var(--secondary)] text-sm mt-1">Contact: 0333-9973274 | 0348-9056525</p>
+                        <p class="font-urdu text-[var(--primary)] font-semibold mt-1 text-sm">شاپ نمبر 104 نیو سبزی منڈی رتہ کلاچی ڈیرہ اسماعیل خان</p>
                     </div>
-
-                    <!-- customer row -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 font-urdu" dir="rtl">
-                        <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
-                            <span class="font-bold text-[var(--primary)]">محترم جناب:</span>
-                            <span id="previewName" class="font-body text-lg text-[var(--secondary)]"></span>
-                        </div>
-                        <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2" dir="ltr">
-                            <span class="font-urdu font-bold text-[var(--primary)]">تاریخ:</span>
-                            <span id="previewDate" class="font-body text-lg text-[var(--secondary)]"></span>
-                        </div>
-                    </div>
-
-                    <!-- main preview row: left = breakdown, right = notes(top) + totals(below) -->
-                    <div class="preview-row mt-8">
-
-                        <!-- LEFT column (breakdown box) -->
-                        <div class="left-col">
-                            <div class="box-break">
-                                <div class="break-row"><div class="break-title">کچی بکری</div><div id="previewKachiBikri" class="break-val">-</div></div>
-                                <div class="break-row"><div class="break-title">خرچہ</div><div id="previewKharcha" class="break-val">-</div></div>
-                                <div style="border-top:1px dashed rgba(0,0,0,0.06);margin:8px 0;"></div>
-                                <div class="break-row"><div class="break-title">پکی بکری</div><div id="previewPakiBikri" class="break-highlight">-</div></div>
-                                <div style="height:18px"></div>
-                                <div class="break-row"><div class="break-title">کل</div><div id="previewGrand" class="break-total">-</div></div>
-                            </div>
-                        </div>
-
-                        <!-- RIGHT column (notes top, totals under) -->
-                        <div class="right-col">
-                            <div class="box-notes">
-                                <div style="font-weight:700;color:var(--primary);margin-bottom:6px;">نوٹس</div>
-                                <div id="previewNotesShort" style="min-height:60px;color:var(--secondary);font-size:0.95rem;">(کوئی نوٹس نہیں)</div>
-                            </div>
-
-                            <div class="box-comm">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                                    <div style="font-weight:700;color:var(--primary);">خلاصہ</div>
-                                    <div style="font-size:0.85rem;color:#6b7280;"></div>
-                                </div>
-
-                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
-                                    <div>کمیشن</div>
-                                    <div id="previewCommission" class="font-bold">-</div>
-                                </div>
-
-                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
-                                    <div>مزدوری</div>
-                                    <div id="previewLabor" class="font-bold">-</div>
-                                </div>
-
-                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
-                                    <div>کرایہ</div>
-                                    <div id="previewFreight" class="font-bold">-</div>
-                                </div>
-
-                                <div style="border-top:1px solid rgba(0,0,0,0.06);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;">
-                                    <div style="font-weight:800;color:#333;">ٹوٹل</div>
-                                    <div id="previewTotalExp" class="font-bold break-total">-</div>
-                                </div>
-
-                                <div style="margin-top:10px;text-align:center;">
-                                    <div style="font-size:0.95rem;font-weight:700;color:var(--accent-green);" id="previewNetLabel">خالص</div>
-                                    <div style="font-size:1.35rem;font-weight:800;color:var(--accent-green);" id="previewPakiNet">-</div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div> <!-- end preview-row -->
-
-                    <!-- hidden items preview kept in DOM -->
-                    <div class="mt-8 items-preview-table">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm">
-                                <thead>
-                                    <tr class="text-[var(--secondary)]">
-                                        <th class="pb-2">Qty</th>
-                                        <th class="pb-2">Unit</th>
-                                        <th class="pb-2">Description</th>
-                                        <th class="pb-2">Rate</th>
-                                        <th class="pb-2">Line Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsPreviewBody" class="text-gray-700"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
                 </div>
-            </div>
 
+                <!-- customer row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 font-urdu" dir="rtl">
+                    <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
+                        <span class="font-bold text-[var(--primary)]">محترم جناب:</span>
+                        <span id="previewName" class="font-body text-lg text-[var(--secondary)]"></span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2" dir="ltr">
+                        <span class="font-urdu font-bold text-[var(--primary)]">تاریخ:</span>
+                        <span id="previewDate" class="font-body text-lg text-[var(--secondary)]"></span>
+                    </div>
+                </div>
+
+                <!-- preview grid 50/50 -->
+                <div class="preview-grid mt-8">
+
+                    <!-- LEFT 50% -->
+                    <div class="left-col">
+                        <div class="box-break">
+                            <div class="break-row"><div class="break-title">کچی بکری</div><div id="previewKachiBikri" class="break-val">-</div></div>
+                            <div class="break-row"><div class="break-title">خرچہ</div><div id="previewKharcha" class="break-val">-</div></div>
+                            <div style="border-top:1px dashed rgba(0,0,0,0.06);margin:8px 0;"></div>
+                            <div class="break-row"><div class="break-title">پکی بکری</div><div id="previewPakiBikri" class="break-highlight">-</div></div>
+                            <div style="height:14px"></div>
+                            <div class="break-row"><div class="break-title">کل</div><div id="previewGrand" class="break-total">-</div></div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT 50% -->
+                    <div class="right-col">
+
+                        <!-- notes top -->
+                        <div class="box-notes">
+                            <div style="font-weight:700;color:var(--primary);margin-bottom:6px;">نوٹس</div>
+                            <div id="previewNotesShort" style="min-height:60px;color:var(--secondary);font-size:0.95rem;">(کوئی نوٹس نہیں)</div>
+                        </div>
+
+                        <!-- summary below notes -->
+                        <div class="box-comm">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <div style="font-weight:700;color:var(--primary);">خلاصہ</div>
+                                <div style="font-size:0.85rem;color:#6b7280;"></div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                <div>کمیشن</div>
+                                <div id="previewCommission" class="font-bold">-</div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                <div>مزدوری</div>
+                                <div id="previewLabor" class="font-bold">-</div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                <div>کرایہ</div>
+                                <div id="previewFreight" class="font-bold">-</div>
+                            </div>
+
+                            <div style="border-top:1px solid rgba(0,0,0,0.06);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;">
+                                <div style="font-weight:800;color:#333;">ٹوٹل</div>
+                                <div id="previewTotalExp" class="font-bold break-total">-</div>
+                            </div>
+
+                            <div style="margin-top:10px;text-align:center;">
+                                <div style="font-size:0.95rem;font-weight:700;color:var(--accent-green);" id="previewNetLabel">خالص</div>
+                                <div style="font-size:1.35rem;font-weight:800;color:var(--accent-green);" id="previewPakiNet">-</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- hidden items preview (kept DOM) -->
+                <div class="mt-8 items-preview-table">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="text-[var(--secondary)]">
+                                    <th class="pb-2">Qty</th>
+                                    <th class="pb-2">Unit</th>
+                                    <th class="pb-2">Description</th>
+                                    <th class="pb-2">Rate</th>
+                                    <th class="pb-2">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsPreviewBody" class="text-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
 
-    </div> <!-- end grid -->
-</div> <!-- end outer container -->
+    </div>
+</div>
 
 <script>
     if (window.lucide) lucide.createIcons();
 
+    // format helper
     function fmt(num) {
         if (num === null || num === undefined || isNaN(num)) return "-";
         return Math.round(num).toLocaleString();
@@ -298,6 +302,7 @@
         updateBill();
     });
 
+    // add item
     function addItem() {
         const container = document.getElementById("itemsList");
         const id = "item-" + Date.now();
@@ -423,7 +428,7 @@
         document.getElementById("previewPakiBikri").textContent = netTotal > 0 ? fmt(netTotal) : "-";
         document.getElementById("previewGrand").textContent = subtotal > 0 ? fmt(subtotal) : "-";
 
-        // right totals (urdu labels in HTML)
+        // right totals (urdu)
         document.getElementById("previewCommission").textContent = commission > 0 ? fmt(commission) : "-";
         document.getElementById("previewFreight").textContent = freightTotal > 0 ? fmt(freightTotal) : "-";
         document.getElementById("previewLabor").textContent = laborTotal > 0 ? fmt(laborTotal) : "-";
@@ -439,7 +444,7 @@
             notesShort.textContent = "(کوئی نوٹس نہیں)";
         }
 
-        // hidden items table populate (kept for records)
+        // populate hidden items table (kept for records)
         const tbody = document.getElementById("itemsPreviewBody");
         if (tbody) {
             tbody.innerHTML = "";
@@ -448,6 +453,72 @@
                 tr.innerHTML = `<td class="py-2">${r.qty}</td><td class="py-2">${escapeHtml(r.unit)}</td><td class="py-2">${escapeHtml(r.desc)}</td><td class="py-2">${r.rate?fmt(r.rate):"-"}</td><td class="py-2 font-bold">${r.lineTotal?fmt(r.lineTotal):"-"}</td>`;
                 tbody.appendChild(tr);
             });
+        }
+    }
+
+    /* ---------- Image export & WhatsApp share ---------- */
+
+    async function downloadImage() {
+        updateBill();
+        const el = document.getElementById('billPreview');
+        const prevShadow = el.style.boxShadow;
+        el.style.boxShadow = 'none';
+
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
+        const dataUrl = canvas.toDataURL('image/png');
+
+        el.style.boxShadow = prevShadow;
+
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `bill-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    async function shareWhatsApp() {
+        updateBill();
+        const el = document.getElementById('billPreview');
+        const prevShadow = el.style.boxShadow;
+        el.style.boxShadow = 'none';
+
+        try {
+            const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1));
+            el.style.boxShadow = prevShadow;
+
+            const file = new File([blob], `bill-${Date.now()}.png`, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'بل',
+                        text: 'بل برائے حاجی عبدالعزیز اسماعیل'
+                    });
+                    return;
+                } catch (err) {
+                    console.warn('navigator.share failed:', err);
+                }
+            }
+
+            // Fallback: download then open WhatsApp web with a message
+            const download = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            download.href = url;
+            download.download = `bill-${Date.now()}.png`;
+            document.body.appendChild(download);
+            download.click();
+            download.remove();
+
+            const msg = encodeURIComponent('میں نے بل ڈاؤنلوڈ کر لیا ہے — براہِ مہربانی اس تصویر کو واٹس ایپ میں منسلک کریں۔');
+            window.open(`https://wa.me/?text=${msg}`, '_blank');
+        } catch (err) {
+            console.error('Share error:', err);
+            const msg = encodeURIComponent('Invoice generated. Please share manually.');
+            window.open(`https://wa.me/?text=${msg}`, '_blank');
+            el.style.boxShadow = prevShadow;
         }
     }
 </script>
