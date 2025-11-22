@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Haji Abdul Aziz Ismail - Bill Generator</title>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root{
+            --primary: #1A237E;
+            --secondary: #424242;
+            --accent-green: #2E7D32;
+            --soft-bg: #F7F9FC;
+            --border-soft: #E0E0E0;
+            --cream: #FFEFD8;
+            --cream-border: #FFCC99;
+            --soft-green: #EAF8E6;
+        }
+
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: var(--soft-bg);
+            color: var(--secondary);
+            -webkit-print-color-adjust:exact;
+            print-color-adjust:exact;
+        }
+
+        .font-eng { font-family: 'Montserrat', sans-serif; }
+        .font-body { font-family: 'Open Sans', sans-serif; }
+        .font-urdu { font-family: 'Noto Naskh Arabic', serif; }
+
+        .invoice-card { background:#fff; border:1px solid var(--border-soft); border-radius:12px; box-shadow:0 8px 28px rgba(14,22,44,0.06); overflow:hidden; }
+
+        .input-underline { border:none; border-bottom:2px solid #e6e7eb; padding:6px 0; background:transparent; transition:border-color .15s; }
+        .input-underline:focus{ outline:none; border-bottom-color:var(--primary); }
+
+        .header-fruit { position:absolute; top:50%; transform:translateY(-50%); width:70px; height:auto; opacity:.95; }
+        .header-fruit.left{ left:16px; }
+        .header-fruit.right{ right:16px; }
+
+        .header-center { padding-left:5.5rem; padding-right:5.5rem; }
+
+        @media (max-width:768px){
+            .header-fruit{ width:56px; }
+            .header-center{ padding-left:1.5rem; padding-right:1.5rem; }
+        }
+
+        /* preview layout */
+        .preview-row { display:flex; gap:1rem; align-items:flex-start; }
+        .left-col { flex:1; }
+        .right-col { width:340px; display:flex; flex-direction:column; gap:1rem; }
+
+        .box-break { background:var(--soft-green); border:1px solid var(--accent-green); border-radius:12px; padding:16px; }
+        .box-notes { background:#fff; border:1px solid #e6e6e6; border-radius:12px; padding:14px; box-shadow:0 6px 12px rgba(0,0,0,0.04); min-height:140px; }
+        .box-comm { background:#fff; border:1px solid rgba(0,0,0,0.06); border-left:6px solid var(--accent-green); border-radius:10px; padding:12px; }
+
+        .break-row { display:flex; justify-content:space-between; padding:8px 0; }
+        .break-title { color:var(--accent-green); font-weight:700; }
+        .break-val { color:var(--secondary); font-weight:700; }
+        .break-highlight { color:var(--accent-green); font-weight:800; font-size:1.05rem; }
+        .break-total { color:#D04545; font-weight:800; font-size:1.1rem; }
+
+        .items-preview-table{ display:none !important; }
+
+        /* print fixes */
+        @media print {
+            @page { margin: 0; size: auto; }
+            .no-print, .no-print * { display:none !important; visibility:hidden !important; }
+            body{ margin:0 !important; padding:0 !important; }
+            .invoice-card{ box-shadow:none !important; border:none !important; }
+            /* Ensure header images print */
+            .header-fruit { display:block !important; opacity:1 !important; width:70px !important; }
+            img { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<!-- NOTE:
+ - Use 'fruits.png' in the same folder as this HTML.
+ - If running inside the environment where images were uploaded to /mnt/data, you may replace src with:
+   /mnt/data/JUST REMOVE.png
+-->
+
+<div class="max-w-7xl mx-auto p-6 md:p-10">
+
+    <!-- Controls (hidden in print via .no-print) -->
+    <div class="flex items-center justify-between mb-6 no-print">
+        <h1 class="text-2xl font-eng font-semibold text-[var(--primary)]">Haji Ismail Commission Agent</h1>
+
+        <div class="flex gap-3">
+            <button onclick="updateBill()" class="bg-[var(--accent-green)] text-white px-4 py-2 rounded-md">Apply Preview</button>
+            <button onclick="printBill()" class="bg-[var(--primary)] text-white px-4 py-2 rounded-md">Print Bill</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- LEFT: FORM -->
+        <div class="space-y-6 no-print">
+
+            <!-- Bill Details -->
+            <div class="invoice-card p-6">
+                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Bill Details</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="text-sm font-body text-[var(--secondary)]">Customer Name</label>
+                        <input id="customerName" type="text" class="w-full input-underline font-body" placeholder="Enter name">
+                    </div>
+                    <div>
+                        <label class="text-sm font-body text-[var(--secondary)]">Date</label>
+                        <input id="date" type="date" class="w-full input-underline font-body">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items -->
+            <div class="invoice-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-eng font-semibold text-[var(--primary)]">Items</h2>
+                    <button onclick="addItem()" class="px-3 py-2 text-sm border rounded-md hover:bg-gray-100">+ Add Item</button>
+                </div>
+                <div id="itemsList" class="space-y-4"></div>
+            </div>
+
+            <!-- Expenses (per-item) -->
+            <div class="invoice-card p-6">
+                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Expenses (Per-item)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-body text-[var(--secondary)]">کمیشن (%):</label>
+                        <div class="flex gap-4 items-center">
+                            <input id="commissionPercent" type="number" class="input-underline font-body w-full" placeholder="مثلاً 2.5" min="0" step="any">
+                            <span class="text-sm text-gray-500">%</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-body text-[var(--secondary)]">مزدوری فی یونٹ</label>
+                        <input id="laborPerItem" type="number" class="w-full input-underline font-body" placeholder="مثلاً 80" value="0" min="0" step="any">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-body text-[var(--secondary)]">کرایہ فی یونٹ</label>
+                        <input id="freightPerItem" type="number" class="w-full input-underline font-body" placeholder="مثلاً 50" value="0" min="0" step="any">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes (form) -->
+            <div class="invoice-card p-6">
+                <h2 class="text-lg font-eng font-semibold text-[var(--primary)] mb-4">Notes</h2>
+                <textarea id="notes" rows="3" class="w-full input-underline font-body" placeholder="کوئی نوٹ..."></textarea>
+            </div>
+        </div>
+
+        <!-- RIGHT: PREVIEW -->
+        <div class="lg:sticky lg:top-8 h-fit">
+
+            <div class="bg-gray-200 p-2 rounded-t-lg text-center text-sm text-gray-600 no-print">Preview Area</div>
+
+            <div class="invoice-card overflow-hidden mt-0">
+                <div class="bg-white p-6 relative">
+
+                    <!-- header -->
+                    <div class="relative pb-4 border-b-2 border-[var(--primary)]">
+                        <!-- local image (project folder) -->
+                        <img src="fruits.png" alt="fruits" class="header-fruit left">
+                        <img src="fruits.png" alt="fruits" class="header-fruit right">
+                        <div class="text-center header-center">
+                            <h1 class="text-[36px] font-urdu font-bold text-[var(--primary)] leading-tight">حاجی عبدالعزیز اسماعیل</h1>
+                            <h2 class="mt-2 text-xl font-eng font-semibold text-[var(--accent-green)]">HAJI ABDUL AZIZ ISMAIL</h2>
+                            <p class="text-sm font-body text-[var(--secondary)] mt-1">Fruits & Vegetable Commission Agent</p>
+                            <p class="font-body text-[var(--secondary)] text-sm mt-1">Contact: 0333-9973274 | 0348-9056525</p>
+                            <p class="font-urdu text-[var(--primary)] font-semibold mt-1 text-base">شاپ نمبر 104 نیو سبزی منڈی رتہ کلاچی ڈیرہ اسماعیل خان</p>
+                        </div>
+                    </div>
+
+                    <!-- customer row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 font-urdu" dir="rtl">
+                        <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
+                            <span class="font-bold text-[var(--primary)]">محترم جناب:</span>
+                            <span id="previewName" class="font-body text-lg text-[var(--secondary)]"></span>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-[var(--border-soft)] pb-2" dir="ltr">
+                            <span class="font-urdu font-bold text-[var(--primary)]">تاریخ:</span>
+                            <span id="previewDate" class="font-body text-lg text-[var(--secondary)]"></span>
+                        </div>
+                    </div>
+
+                    <!-- main preview row: left = breakdown, right = notes(top) + totals(below) -->
+                    <div class="preview-row mt-8">
+
+                        <!-- LEFT column (breakdown box) -->
+                        <div class="left-col">
+                            <div class="box-break">
+                                <div class="break-row"><div class="break-title">کچی بکری</div><div id="previewKachiBikri" class="break-val">-</div></div>
+                                <div class="break-row"><div class="break-title">خرچہ</div><div id="previewKharcha" class="break-val">-</div></div>
+                                <div style="border-top:1px dashed rgba(0,0,0,0.06);margin:8px 0;"></div>
+                                <div class="break-row"><div class="break-title">پکی بکری</div><div id="previewPakiBikri" class="break-highlight">-</div></div>
+                                <div style="height:18px"></div>
+                                <div class="break-row"><div class="break-title">کل</div><div id="previewGrand" class="break-total">-</div></div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT column (notes top, totals under) -->
+                        <div class="right-col">
+                            <div class="box-notes">
+                                <div style="font-weight:700;color:var(--primary);margin-bottom:6px;">نوٹس</div>
+                                <div id="previewNotesShort" style="min-height:60px;color:var(--secondary);font-size:0.95rem;">(کوئی نوٹس نہیں)</div>
+                            </div>
+
+                            <div class="box-comm">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                    <div style="font-weight:700;color:var(--primary);">خلاصہ</div>
+                                    <div style="font-size:0.85rem;color:#6b7280;"></div>
+                                </div>
+
+                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                    <div>کمیشن</div>
+                                    <div id="previewCommission" class="font-bold">-</div>
+                                </div>
+
+                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                    <div>مزدوری</div>
+                                    <div id="previewLabor" class="font-bold">-</div>
+                                </div>
+
+                                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                                    <div>کرایہ</div>
+                                    <div id="previewFreight" class="font-bold">-</div>
+                                </div>
+
+                                <div style="border-top:1px solid rgba(0,0,0,0.06);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;">
+                                    <div style="font-weight:800;color:#333;">ٹوٹل</div>
+                                    <div id="previewTotalExp" class="font-bold break-total">-</div>
+                                </div>
+
+                                <div style="margin-top:10px;text-align:center;">
+                                    <div style="font-size:0.95rem;font-weight:700;color:var(--accent-green);" id="previewNetLabel">خالص</div>
+                                    <div style="font-size:1.35rem;font-weight:800;color:var(--accent-green);" id="previewPakiNet">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> <!-- end preview-row -->
+
+                    <!-- hidden items preview kept in DOM -->
+                    <div class="mt-8 items-preview-table">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="text-[var(--secondary)]">
+                                        <th class="pb-2">Qty</th>
+                                        <th class="pb-2">Unit</th>
+                                        <th class="pb-2">Description</th>
+                                        <th class="pb-2">Rate</th>
+                                        <th class="pb-2">Line Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsPreviewBody" class="text-gray-700"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div> <!-- end grid -->
+</div> <!-- end outer container -->
+
+<script>
+    if (window.lucide) lucide.createIcons();
+
+    function fmt(num) {
+        if (num === null || num === undefined || isNaN(num)) return "-";
+        return Math.round(num).toLocaleString();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateInput = document.getElementById("date");
+        if (dateInput) dateInput.valueAsDate = new Date();
+        addItem();
+        updateBill();
+    });
+
+    function addItem() {
+        const container = document.getElementById("itemsList");
+        const id = "item-" + Date.now();
+        const div = document.createElement("div");
+        div.id = id;
+        div.className = "grid grid-cols-[1fr_1fr_2fr_1fr_auto] gap-4 items-end pb-4 border-b last:border-0";
+        div.innerHTML = `
+            <div>
+                <label class="text-xs font-body text-gray-600">Qty</label>
+                <input type="number" class="item-qty w-full input-underline font-body" placeholder="1" value="1" min="0" step="any">
+            </div>
+            <div>
+                <label class="text-xs font-body text-gray-600">Unit</label>
+                <select class="item-unit w-full input-underline font-body bg-white">
+                    <option value="Peti">Peti</option><option value="Bori">Bori</option><option value="Nag">Nag</option><option value="Dozen">Dozen</option><option value="Kg">Kg</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-body text-gray-600">Description</label>
+                <input type="text" class="item-desc w-full input-underline font-body" placeholder="Item name">
+            </div>
+            <div>
+                <label class="text-xs font-body text-gray-600">Rate</label>
+                <input type="number" class="item-rate w-full input-underline font-body" placeholder="0" value="0" min="0" step="any">
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="removeItem('${id}')" class="p-2 text-red-500 hover:bg-red-50 rounded-md">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+        if (window.lucide) lucide.createIcons();
+        const inputs = div.querySelectorAll("input, select");
+        inputs.forEach(inp => inp.addEventListener("input", debounceUpdate));
+        updateBill();
+    }
+
+    function removeItem(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const all = document.querySelectorAll("#itemsList > div");
+        if (all.length <= 1) {
+            const qty = el.querySelector(".item-qty");
+            const desc = el.querySelector(".item-desc");
+            const rate = el.querySelector(".item-rate");
+            const unit = el.querySelector(".item-unit");
+            if (qty) qty.value = 0;
+            if (desc) desc.value = "";
+            if (rate) rate.value = 0;
+            if (unit) unit.selectedIndex = 0;
+        } else {
+            el.remove();
+        }
+        updateBill();
+    }
+
+    let updateTimer = null;
+    function debounceUpdate() {
+        if (updateTimer) clearTimeout(updateTimer);
+        updateTimer = setTimeout(() => { updateBill(); updateTimer = null; }, 150);
+    }
+
+    function printBill() {
+        updateBill();
+        setTimeout(() => window.print(), 200);
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text.replace(/[&<>"'`=\/]/g, function (s) {
+            return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;' })[s];
+        });
+    }
+
+    function updateBill() {
+        const name = document.getElementById("customerName").value || "";
+        const dateVal = document.getElementById("date").value || "";
+
+        const rows = document.querySelectorAll("#itemsList > div");
+        let subtotal = 0;
+        let totalQty = 0;
+        const previewRows = [];
+
+        rows.forEach(row => {
+            const qEl = row.querySelector(".item-qty");
+            const rEl = row.querySelector(".item-rate");
+            const uEl = row.querySelector(".item-unit");
+            const dEl = row.querySelector(".item-desc");
+            const qty = parseFloat(qEl?.value) || 0;
+            const rate = parseFloat(rEl?.value) || 0;
+            const unit = uEl?.value || "";
+            const desc = dEl?.value || "";
+            const lineTotal = qty * rate;
+            subtotal += lineTotal;
+            totalQty += qty;
+            previewRows.push({ qty, unit, desc, rate, lineTotal });
+        });
+
+        const commissionPercent = parseFloat(document.getElementById("commissionPercent").value) || 0;
+        const commission = Math.round(subtotal * (commissionPercent / 100));
+
+        const freightPerItem = parseFloat(document.getElementById("freightPerItem").value) || 0;
+        const laborPerItem = parseFloat(document.getElementById("laborPerItem").value) || 0;
+        const freightTotal = freightPerItem * totalQty;
+        const laborTotal = laborPerItem * totalQty;
+
+        const totalExpenses = commission + freightTotal + laborTotal;
+        const netTotal = subtotal - totalExpenses;
+
+        // header
+        document.getElementById("previewName").textContent = name;
+        if (dateVal) {
+            const d = new Date(dateVal);
+            document.getElementById("previewDate").textContent = d.toLocaleDateString("en-GB");
+        } else {
+            document.getElementById("previewDate").textContent = "";
+        }
+
+        // left breakdown
+        document.getElementById("previewKachiBikri").textContent = subtotal > 0 ? fmt(subtotal) : "-";
+        document.getElementById("previewKharcha").textContent = totalExpenses > 0 ? fmt(totalExpenses) : "-";
+        document.getElementById("previewPakiBikri").textContent = netTotal > 0 ? fmt(netTotal) : "-";
+        document.getElementById("previewGrand").textContent = subtotal > 0 ? fmt(subtotal) : "-";
+
+        // right totals (urdu labels in HTML)
+        document.getElementById("previewCommission").textContent = commission > 0 ? fmt(commission) : "-";
+        document.getElementById("previewFreight").textContent = freightTotal > 0 ? fmt(freightTotal) : "-";
+        document.getElementById("previewLabor").textContent = laborTotal > 0 ? fmt(laborTotal) : "-";
+        document.getElementById("previewTotalExp").textContent = totalExpenses > 0 ? fmt(totalExpenses) : "-";
+        document.getElementById("previewPakiNet").textContent = netTotal > 0 ? fmt(netTotal) : "-";
+
+        // notes
+        const notes = document.getElementById("notes").value || "";
+        const notesShort = document.getElementById("previewNotesShort");
+        if (notes.trim()) {
+            notesShort.textContent = notes;
+        } else {
+            notesShort.textContent = "(کوئی نوٹس نہیں)";
+        }
+
+        // hidden items table populate (kept for records)
+        const tbody = document.getElementById("itemsPreviewBody");
+        if (tbody) {
+            tbody.innerHTML = "";
+            previewRows.forEach(r => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td class="py-2">${r.qty}</td><td class="py-2">${escapeHtml(r.unit)}</td><td class="py-2">${escapeHtml(r.desc)}</td><td class="py-2">${r.rate?fmt(r.rate):"-"}</td><td class="py-2 font-bold">${r.lineTotal?fmt(r.lineTotal):"-"}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
